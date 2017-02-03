@@ -1,6 +1,6 @@
 import sys
 from .io import read_active_sites, write_clustering, write_mult_clusterings
-from .cluster import cluster_by_partitioning, cluster_hierarchically
+from .cluster import cluster_by_partitioning, cluster_hierarchically, compute_similarity
 
 # Some quick stuff to make sure the program is called correctly
 if len(sys.argv) < 4:
@@ -8,6 +8,10 @@ if len(sys.argv) < 4:
     sys.exit(0)
 
 active_sites = read_active_sites(sys.argv[2])
+#testactive = active_sites[4]
+#print(testactive.categories)
+#print('compute similarity test')
+#compute_similarity(active_sites[4], active_sites[6])
 
 # Choose clustering algorithm
 if sys.argv[1][0:2] == '-P':

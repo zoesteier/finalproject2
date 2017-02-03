@@ -35,7 +35,12 @@ class ActiveSite:
     def __init__(self, name):
         self.name = name
         self.residues = []
+        self.categories = [] 
+        # Categorize residues by biochemical properties, store in list where values are fraction of aa's in that category
+        
 
     # Overload the __repr__ operator to make printing simpler.
     def __repr__(self):
         return self.name
+    
+    

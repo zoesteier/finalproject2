@@ -1,6 +1,7 @@
 import glob
 import os
 from .utils import Atom, Residue, ActiveSite
+import numpy as np
 
 
 def read_active_sites(dir):
@@ -53,7 +54,7 @@ def read_active_site(filepath):
                 atom = Atom(atom_type)
                 atom.coords = (x_coord, y_coord, z_coord)
 
-                residue_type = line[17:20]
+                residue_type = line[17:20] # amino acid
                 residue_number = int(line[23:26])
 
                 # make a new residue if needed
@@ -66,9 +67,53 @@ def read_active_site(filepath):
 
             else:  # I've reached a TER card
                 active_site.residues.append(residue)
+                
+        # Categorize residues in an active site by biochemical properties, ouput a dictionary where keys are amino acids and values are the count of that aa
+        Aresidues = {}
+        aminoacids = ['ASP','GLU','HIS','ARG','LYS','SER','THR','ASN','GLN','CYS','PHE','TRP','TYR','GLY','ALA','VAL','LEU','ILE','MET','PRO']
+        for aa in aminoacids:
+            Aresidues[aa] = 0 # initialize Aresidues dictionary with aa's as keys and all values set to 0
+        for res in active_site.residues:
+            if res.type not in Aresidues:
+                Aresidues[res.type] = 1
+            else:
+                Aresidues[res.type] += 1
+        totalresidues = sum(Aresidues.values()) # total residues in active site
 
-    return active_site
 
+        # Categorize residues by biochemical properties, store in list where values are counts of aa's in that category. 
+        #Arescategories = [acidic, basic, hydrophobic, nonpolar, polar] fractions
+        Arescategories = np.array([0.0]*5)
+        Arescategories[0] = Aresidues['ASP'] + Aresidues['GLU'] #'acidic'
+        Arescategories[1] = Aresidues['HIS'] + Aresidues['ARG'] + Aresidues['LYS'] #'basic'
+        Arescategories[2] = Aresidues['PHE'] + Aresidues['TRP'] + Aresidues['TYR'] #'hydrophobic'
+        Arescategories[3] = Aresidues['GLY'] + Aresidues['ALA'] + Aresidues['VAL'] + Aresidues['LEU'] + Aresidues['ILE'] + Aresidues['MET'] + Aresidues['PRO'] #'nonpolar'
+        Arescategories[4] = Aresidues['SER'] + Aresidues['THR'] + Aresidues['ASN'] + Aresidues['GLN'] + Aresidues['CYS'] #'polar'
+       
+        # Normalize by total number of residues in the active site so that each category will represent the fraction of amino acids in the active site in that category (e.g. 0.5 polar, 0.5 basic)
+        Arescategories = Arescategories/totalresidues
+            
+        active_site.categories = Arescategories # add categories to the active site        
+        return active_site
+        
+#%% 
+         # Categorize residues by biochemical properties, store in dictionary where keys are categories and values are counts of aa's in that category
+#        Arescategories = {}
+#        Arescategories['acidic'] = Aresidues['ASP'] + Aresidues['GLU']
+#        Arescategories['basic'] = Aresidues['HIS'] + Aresidues['ARG'] + Aresidues['LYS']
+#        Arescategories['polar'] = Aresidues['SER'] + Aresidues['THR'] + Aresidues['ASN'] + Aresidues['GLN'] + Aresidues['CYS']
+#        Arescategories['hydrophobic'] = Aresidues['PHE'] + Aresidues['TRP'] + Aresidues['TYR']
+#        Arescategories['nonpolar'] = Aresidues['GLY'] + Aresidues['ALA'] + Aresidues['VAL'] + Aresidues['LEU'] + Aresidues['ILE'] + Aresidues['MET'] + Aresidues['PRO']
+#        
+#        # Normalize by total number of residues in the active site so that each category will represent the fraction of amino acids in the active site in that category (e.g. 0.5 polar, 0.5 basic)
+#        for category in Arescategories.keys():
+#            Arescategories[category] = (Arescategories[category])/totalresidues
+#            
+#        active_site.categories.update(Arescategories) # add categories to the active site
+        #print(active_site.categories)
+
+#    return active_site
+#%%
 
 def write_clustering(filename, clusters):
     """
@@ -82,9 +127,10 @@ def write_clustering(filename, clusters):
 
     for i in range(len(clusters)):
         out.write("\nCluster %d\n--------------\n" % i)
-        for j in range(len(clusters[i])):
-            out.write("%s\n" % clusters[i][j])
-
+        for j in range(len(clusters[i].points)):
+            out.write("%s\n" % clusters[i].points[j])
+           # out.write("%s\n" % clusters[i].points[j].residues)
+            out.write("%s\n" % clusters[i].points[j].categories)
     out.close()
 
 
