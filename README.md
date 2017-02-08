@@ -7,9 +7,9 @@ Skeleton for clustering project.
 
 ## assignment
 
-1. Implement a similarity metric
-2. Implement a clustering method based on a partitioning algorithm
-3. Implement a clustering method based on a hierarchical algorithm
+1. Implement a similarity metric (metric in io.py, compute similarity in cluster.py)
+2. Implement a clustering method based on a partitioning algorithm (used k means)
+3. Implement a clustering method based on a hierarchical algorithm (used agglomerative clustering)
 4. Answer the questions given in the homework assignment
 
 
