@@ -96,23 +96,7 @@ def read_active_site(filepath):
         active_site.categories = Arescategories # add categories to the active site        
         return active_site
         
-#%% 
-         # Categorize residues by biochemical properties, store in dictionary where keys are categories and values are counts of aa's in that category
-#        Arescategories = {}
-#        Arescategories['acidic'] = Aresidues['ASP'] + Aresidues['GLU']
-#        Arescategories['basic'] = Aresidues['HIS'] + Aresidues['ARG'] + Aresidues['LYS']
-#        Arescategories['polar'] = Aresidues['SER'] + Aresidues['THR'] + Aresidues['ASN'] + Aresidues['GLN'] + Aresidues['CYS']
-#        Arescategories['hydrophobic'] = Aresidues['PHE'] + Aresidues['TRP'] + Aresidues['TYR']
-#        Arescategories['nonpolar'] = Aresidues['GLY'] + Aresidues['ALA'] + Aresidues['VAL'] + Aresidues['LEU'] + Aresidues['ILE'] + Aresidues['MET'] + Aresidues['PRO']
-#        
-#        # Normalize by total number of residues in the active site so that each category will represent the fraction of amino acids in the active site in that category (e.g. 0.5 polar, 0.5 basic)
-#        for category in Arescategories.keys():
-#            Arescategories[category] = (Arescategories[category])/totalresidues
-#            
-#        active_site.categories.update(Arescategories) # add categories to the active site
-        #print(active_site.categories)
 
-#    return active_site
 #%%
 
 def write_clustering(filename, clusters):
@@ -127,9 +111,10 @@ def write_clustering(filename, clusters):
 
     for i in range(len(clusters)):
         out.write("\nCluster %d\n--------------\n" % i)
+        #out.write("%s\n" % clusters[i].getCentroid().categories)
         for j in range(len(clusters[i].points)):
             out.write("%s\n" % clusters[i].points[j])
-           # out.write("%s\n" % clusters[i].points[j].residues)
+            out.write("%s\n" % clusters[i].points[j].residues)
             out.write("%s\n" % clusters[i].points[j].categories)
     out.close()
 
@@ -149,7 +134,8 @@ def write_mult_clusterings(filename, clusterings):
 
         for j in range(len(clusters)):
             out.write("\nCluster %d\n------------\n" % j)
-            for k in range(len(clusters[j])):
-                out.write("%s\n" % clusters[j][k])
+            for k in range(len(clusters[j].points)):
+                out.write("%s\n" % clusters[j].points[k])
+                #out.write("%s\n" % clusters[j].points[k].categories)
 
     out.close()

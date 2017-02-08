@@ -8,6 +8,7 @@ if len(sys.argv) < 4:
     sys.exit(0)
 
 active_sites = read_active_sites(sys.argv[2])
+# Test that reading active sites is functioning properly
 #testactive = active_sites[4]
 #print(testactive.categories)
 #print('compute similarity test')
