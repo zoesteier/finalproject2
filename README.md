@@ -1,9 +1,9 @@
-# HW2 Skeleton
+# HW3 Skeleton
 
 [![Build
-Status](https://travis-ci.org/zoesteier/hw2-skeleton.svg?branch=master)](https://travis-ci.org/zoesteier/hw2-skeleton)
+Status](https://travis-ci.org/zoesteier/hw3.svg?branch=master)](https://travis-ci.org/zoesteier/hw3)
 
-Skeleton for clustering project.
+Skeleton for Smith-Waterman project.
 
 ## assignment
 
