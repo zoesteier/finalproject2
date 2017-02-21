@@ -6,11 +6,8 @@ Status](https://travis-ci.org/zoesteier/hw3.svg?branch=master)](https://travis-c
 Skeleton for Smith-Waterman project.
 
 ## assignment
-
-1. Implement a similarity metric (metric in io.py, compute similarity in cluster.py)
-2. Implement a clustering method based on a partitioning algorithm (used k means)
-3. Implement a clustering method based on a hierarchical algorithm (used agglomerative clustering)
-4. Answer the questions given in the homework assignment
+1. Read in score matrices.
+2. Implement Smith-Waterman algorithm
 
 
 ## structure
