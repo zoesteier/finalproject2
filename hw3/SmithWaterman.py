@@ -40,6 +40,7 @@ BLOSUM50, matorder = readScoreMatrix('BLOSUM50')
 BLOSUM62, matorder = readScoreMatrix('BLOSUM62')
 PAM100, matorder = readScoreMatrix('PAM100')
 PAM250, matorder = readScoreMatrix('PAM250')
+MATIO, matorder = readScoreMatrix('MATIO')
 #%%
 # look up scores using a dictionary
 # key is amino acid (string), value is position in the matrix (int)
@@ -89,29 +90,29 @@ print("Read in %d sequences"%len(sequences))
 #print(sequences[0])
 
 #%%
-# Extract score from two characters
-# To extract a score from the matrix, use score = BLOSUM50[scoredict[seq1[i]]][scoredict[seq2[j]]]
-
-seq1 = sequences[0]
-seq2 = sequences[1]
-
-seq1char = scoredict[seq1[1]]
-#print(seq1char)
-seq2char = scoredict[seq2[1]]
-#print(seq2char)
-score = BLOSUM50[seq1char][seq2char]
-#print(score)
-# test: 0, 0: S, A score = 1
-seq1char = scoredict[seq1[0]]
-#print(seq1char)
-seq2char = scoredict[seq2[0]]
-#print(seq2char)
-score = BLOSUM50[seq1char][seq2char]
-#score1 = BLOSUM50[scoredict[seq1[0]]][scoredict[seq2[0]]]
-#print(score)
-#print(score1)
-#print(score)
-# test: 1, 1: L, N score = -4
+## Extract score from two characters
+## To extract a score from the matrix, use score = BLOSUM50[scoredict[seq1[i]]][scoredict[seq2[j]]]
+#
+#seq1 = sequences[0]
+#seq2 = sequences[1]
+#
+#seq1char = scoredict[seq1[1]]
+##print(seq1char)
+#seq2char = scoredict[seq2[1]]
+##print(seq2char)
+#score = BLOSUM50[seq1char][seq2char]
+##print(score)
+## test: 0, 0: S, A score = 1
+#seq1char = scoredict[seq1[0]]
+##print(seq1char)
+#seq2char = scoredict[seq2[0]]
+##print(seq2char)
+#score = BLOSUM50[seq1char][seq2char]
+##score1 = BLOSUM50[scoredict[seq1[0]]][scoredict[seq2[0]]]
+##print(score)
+##print(score1)
+##print(score)
+## test: 1, 1: L, N score = -4
 
 #%%
 # Smith Waterman algorithm
@@ -133,7 +134,7 @@ import unittest
 
 
 # Use scores from the scoring matrix.
-SCORES = BLOSUM50
+SCORES = PAM100
 #gapopening = 10
 #gapextension = 1
 seq1     = None
@@ -141,6 +142,8 @@ seq2     = None
 lastmove = None
 
 def SmithWaterman(seq1, seq2):
+    '''Input two sequences, output a final score of the algined sequences and the two aligned sequences as strings.
+    '''
 #def main():
 #    try:
 #        seq1, seq2 = parse_cmd_line()
@@ -157,6 +160,8 @@ def SmithWaterman(seq1, seq2):
     # Initialize the scoring matrix.
     score_matrix, start_pos, pointer_matrix = create_score_matrix(rows, cols, seq1, seq2)
     #print(score_matrix[start_pos[0]][start_pos[1]]) #confirm that find max score
+#    print(score_matrix)
+#    print(start_pos)
     finalscore = score_matrix[start_pos[0]][start_pos[1]]
 
     # Traceback. Find the optimal path through the scoring matrix. This path
@@ -180,7 +185,7 @@ def SmithWaterman(seq1, seq2):
 #        print('Sbjct  {0:<4}  {1}  {2:<4}'.format(i + 1, seq2_slice, i + len(seq2_slice)))
 #        print()
     
-    return(finalscore)
+    return finalscore, seq1_aligned, seq2_aligned, score_matrix
 
 def parse_cmd_line():
     '''Parse the command line arguments.
@@ -216,8 +221,8 @@ def create_score_matrix(rows, cols, seq1, seq2):
     # Calculate the score at each potential alignment
 #    print(rows)
 #    print(cols)
-    for i in range(1, rows-1):
-        for j in range(1, cols-1):
+    for i in range(1, rows):
+        for j in range(1, cols):
             #print([i,j])
             score = calc_score(score_matrix, i, j, seq1, seq2)
             if score > max_score:
@@ -229,6 +234,7 @@ def create_score_matrix(rows, cols, seq1, seq2):
 
     assert max_pos is not None, 'the x, y position with the highest score was not found'
     #print(pointer_matrix)
+
     
     return score_matrix, max_pos, pointer_matrix
 
@@ -245,7 +251,7 @@ def calc_score(matrix, x, y, seq1, seq2):
 #    print(SCORES[scoredict[seq1[x]]][scoredict[seq2[y]]])
 
     
-    newposscore = SCORES[scoredict[seq1[x].upper()]][scoredict[seq2[y].upper()]]
+    newposscore = SCORES[scoredict[seq1[x-1].upper()]][scoredict[seq2[y-1].upper()]]
     # use string.upper() to convert all AAs to upper case so their keys are recognized in the dictionary
 
     diag_score = matrix[x - 1][y - 1] + newposscore
@@ -303,10 +309,11 @@ def traceback(score_matrix, start_pos, seq1, seq2, pointer_matrix):
             aligned_seq2.append(seq2[y - 1])
             y -= 1
 
-        move = next_move(score_matrix, x, y)
+        move = pointer_matrix[x][y]
+        #move = next_move(score_matrix, x, y)
 
-    aligned_seq1.append(seq1[x - 1])
-    aligned_seq2.append(seq2[y - 1])
+#    aligned_seq1.append(seq1[x - 1])
+#    aligned_seq2.append(seq2[y - 1])
 
     # aligned from end to start, now reverse order of sequence to be from start to end
     return ''.join(reversed(aligned_seq1)), ''.join(reversed(aligned_seq2))
@@ -401,11 +408,15 @@ class ScoreMatrixTest(unittest.TestCase):
 #if __name__ == '__main__':
 #    sys.exit(main())
 
-## Try an alignment
+### Try an alignment
 #seq1 = sequences[0]
 #seq2 = sequences[1]
-#final = SmithWaterman(seq1, seq2)
+##seq1 = 'DARNRAA'
+##seq2 = 'CARNAA'
+#final, first, second, scorematrix = SmithWaterman(seq1, seq2)
 #print(final)
+# For BLOSUM50 get 47 with gaps (9,4)
+# For PAM100 get 25 with gaps(9,4)
 
 #%% 
 # Question 1:
@@ -437,9 +448,13 @@ def readSeqPairs(filepath):
 #print(Negpairs)
 
 def alignSeqPairs(pairlist):
-    '''Align sequence pairs contained in a list. Output a list of scores from those sequences.'''
+    '''Align sequence pairs contained in a list. Output a list of scores from those sequences.
+    '''
+    
     scorelist = np.zeros(len(pairlist)) # store scores in array, initialize to 0
-    scorelistnorm = np.zeros(len(pairlist)) # store scores in array, initialize to 0
+    #scorelistnorm = np.zeros(len(pairlist)) # store scores in array, initialize to 0
+    #minlengths = np.zeros(len(pairlist)) # store min lengths of sequences
+    #alignedsequences = [[]]*len(pairlist)
     
     # Get the sequence from the list of names
     for i in range(len(pairlist)):
@@ -450,16 +465,21 @@ def alignSeqPairs(pairlist):
         seq2 = sequences[sequencenames.index(seq2name)]
         
         # Run the Smith-Waterman algorithm for sequence pair i
-        score = SmithWaterman(seq1, seq2)
-        scorenormalized = score/min(len(seq1), len(seq2)) # normalize score by dividing by the length of the shorter sequence
+        score, seq1_aligned, seq2_aligned = SmithWaterman(seq1, seq2)
+        #scorenormalized = score/min(len(seq1), len(seq2)) # normalize score by dividing by the length of the shorter sequence
         
         scorelist[i] = score
-        scorelistnorm[i] = scorenormalized
+        #scorelistnorm[i] = scorenormalized
+        #minlengths[i] = min(len(seq1), len(seq2))
+        #alignedsequences[i] = [seq1_aligned, seq2_aligned]
         
-#    return scorelist
+    # For unnormalized scores   
+    return scorelist
 #    print(scorelist)
 #    print(scorelistnorm)
-    return scorelistnorm
+
+#   For normalized scores
+#    return scorelistnorm, minlengths
     
 ## Make sorted lists of scores for positive and negative pairs
 #Posscores = np.sort(alignSeqPairs(Pospairs))
@@ -491,6 +511,7 @@ def findBestPenalties():
         for gapextension in range(1,6):
             print('Testing open = ', gapopening, 'and extension = ', gapextension)
             # Make sorted lists of scores for positive and negative pairs
+            
             Posscores = np.sort(alignSeqPairs(Pospairs))
             Negscores = np.sort(alignSeqPairs(Negpairs))
             
@@ -538,7 +559,7 @@ def findBestMatrix():
     
     # Use gap scores determined above
     global SCORES
-    SCORE_matrices = [BLOSUM50, BLOSUM62, PAM100, PAM250]
+    SCORE_matrices = [BLOSUM50, BLOSUM62, PAM100, PAM250, MATIO]
     
     # Find the matrix with lowest FP rate at TP rate = 0.7
     lowestfprate = 1 # initialize false positive rate (highest: 100% fp)
@@ -581,8 +602,8 @@ def findBestMatrix():
 def plotROC():
     # Plot ROC curve with values from each score matrix
     
-    global SCORES
-    SCORE_matrices = [BLOSUM50, BLOSUM62, PAM100, PAM250]
+    #global SCORES
+    SCORE_matrices = [BLOSUM50, BLOSUM62, PAM100, PAM250, MATIO]
     
     # Make lists of positive and negative sequence pairs
     Pospairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Pospairs.txt')
@@ -596,7 +617,17 @@ def plotROC():
         SCORES = SCORE_matrices[i]
         print('Testing matrix: ', i)
         
-        # Make sorted lists of scores for positive and negative pairs
+#        # Make sorted lists of scores for positive and negative pairs
+#        posunsort, Posscorelengths = alignSeqPairs(Pospairs)
+#        negunsort, Negscorelengths = alignSeqPairs(Negpairs)
+#        print(np.mean(Posscorelengths))
+#        print (np.mean(Negscorelengths))
+#        
+#        # For normalized
+#        Posscores = np.sort(posunsort)
+#        Negscores = np.sort(negunsort)
+        
+        # For unnormalized
         Posscores = np.sort(alignSeqPairs(Pospairs))
         Negscores = np.sort(alignSeqPairs(Negpairs))
         
@@ -617,6 +648,7 @@ def plotROC():
     TPrates = [[]]*len(SCORE_matrices)
     AUCs = np.zeros((len(SCORE_matrices), 1)) # store all AUC values (area under the ROC curve)
     
+    # Use sklearn's ROC curve function
     for i in range(len(SCORE_matrices)):
         false_positive_rate, true_positive_rate, thresholds = roc_curve(actual, predictions[i])
         roc_auc = auc(false_positive_rate, true_positive_rate)
@@ -631,6 +663,7 @@ def plotROC():
     plt.plot(FPrates[1], TPrates[1], label = ('BLOSUM62, AUC = %0.2f'% AUCs[1]))
     plt.plot(FPrates[2], TPrates[2], label = ('PAM100, AUC = %0.2f'% AUCs[2]))
     plt.plot(FPrates[3], TPrates[3], label = ('PAM250, AUC = %0.2f'% AUCs[3]))
+    plt.plot(FPrates[4], TPrates[4], label = ('MATIO, AUC = %0.2f'% AUCs[4]))
     #label='AUC = %0.2f'% roc_auc)
     plt.legend(loc='lower right')
     plt.plot([0,1],[0,1],'r--')
@@ -640,11 +673,108 @@ def plotROC():
     plt.xlabel('False Positive Rate')
     return
     
-plotROC()
+#plotROC()
 
+# Question 3: normalize scores in alignSeqPairs function
 #%%
-# Question 3: Normalize scores
+# Part 2: Optimization
 
+# Using the best gap penalties and matrix from part 1, create an alignment for each positive pair and negative pair of sequences.
+
+# Gap opening penalty is 9, gap extension penalty is 4 (see above)
+# Best matrix is PAM100 (see above)
+SCORES = PAM100
+def alignSeqPairsStatic(pairlist):
+    '''Align sequence pairs contained in a list to generate a static alignment. Output a list of scores from those sequences. Also return a list of lists containing aligned sequences.
+    '''
     
+    scorelist = np.zeros(len(pairlist)) # store scores in array, initialize to 0
+    alignedsequences = [[]]*len(pairlist)
+    
+    # Get the sequence from the list of names
+    for i in range(len(pairlist)):
+        seq1name = pairlist[i][0]
+        seq2name = pairlist[i][1]
+        seq1 = sequences[sequencenames.index(seq1name)]
+        seq2 = sequences[sequencenames.index(seq2name)]
+        
+        # Run the Smith-Waterman algorithm for sequence pair i
+        score, seq1_aligned, seq2_aligned, score_matrix = SmithWaterman(seq1, seq2)
+        
+        # Collect the scores and aligned sequences in lists
+        scorelist[i] = score
+        alignedsequences[i] = [seq1_aligned, seq2_aligned]
+        
+    # For unnormalized scores   
+    return scorelist, alignedsequences
+
+def makeStaticAlignments():  
+# Make lists of positive and negative sequence pairs from the best matrix/penalties determined above.
+    Pospairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Pospairs.txt')
+    Negpairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Negpairs.txt')
+        
+    # For unnormalized
+    Posscores, PosAlignedSeqs = alignSeqPairsStatic(Pospairs)
+    Negscores, NegAlignedSeqs = alignSeqPairsStatic(Negpairs)
+    
+    return PosAlignedSeqs, NegAlignedSeqs, Posscores, Negscores
+  
+## Generate and save the static alignments
+#PosStatic, NegStatic, PosStaticScores, NegStaticScores = makeStaticAlignments()
+#
+import pickle # this will write the aligned lists to a file to use later
+#with open("PosStatic.txt", "wb") as fp:   #Pickling
+#    pickle.dump(PosStatic, fp)
+#fp.close()
+#
+#with open("NegStatic.txt", "wb") as fp:   #Pickling
+#    pickle.dump(NegStatic, fp)
+#fp.close()
+
+# Read the static alignment list by "unpickling" from the file
+with open("PosStatic.txt", "rb") as a:   # Unpickling
+    PosStatic = pickle.load(a)
+a.close()
+with open("NegStatic.txt", "rb") as b:
+    NegStatic = pickle.load(b)
+b.close()
+#print(PosStatic)
+#print(' ')
+#print(NegStatic)
+
+
+def calc_score_aligned(matrix, seq1_aligned, seq2_aligned):
+    '''Calculate the score of an aligned sequence pair.'''
+
+    assert len(seq1_aligned) == len(seq2_aligned), 'aligned strings are not the same size'
+    
+    score = 0 # initialize score to 0
+    lastalign = 'match' 
+    # keep track of match/mismatch or gap to know when to add gap      opening or   extension penalty
+    
+    # Take sum of scores over each position in the alignment
+    for i in range(len(seq1_aligned)):
+
+        if seq1_aligned[i] == '-' or seq2_aligned[i] == '-': # currently a gap
+            lastalign = 'gap'
+            if lastalign == 'match':
+                score -= gapopening # open new gap
+            elif lastalign == 'gap':
+                score -= gapextension # extend a gap
+            else:
+                print('error')
+        else: # currently a match or a mismatch
+            lastalign = 'match'
+            score += SCORES[scoredict[seq1_aligned[i].upper()]][scoredict[seq2_aligned[i].upper()]]
+    # use string.upper() to convert all AAs to upper case so their keys are recognized in the dictionary
+        #print(score)
+
+    return score
+    
+#scoretest = calc_score_aligned(SCORES, PosStatic[0][0], PosStatic[0][1])
+##score = calc_score_aligned(SCORES, 'ARNRA', 'ARNAA')
+#print('score')
+#print(scoretest)
+#score = 25, matches max score from score matrix correctly
 
         
