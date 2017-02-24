@@ -10,7 +10,7 @@ import numpy as np
 
 
 #%%
-# This function takes a score matrix in the data folder as an input and returns a numpy array containing the score of each amino acid pair
+# This function takes a score matrix in the data folder as an input and returns a numpy matrix containing the score of each amino acid pair
 
 def readScoreMatrix(matrix): # matrix is name of matrix as a string
     with open(os.path.join("..","data",matrix)) as f:
@@ -161,7 +161,7 @@ def SmithWaterman(seq1, seq2):
     score_matrix, start_pos, pointer_matrix = create_score_matrix(rows, cols, seq1, seq2)
     #print(score_matrix[start_pos[0]][start_pos[1]]) #confirm that find max score
 #    print(score_matrix)
-#    print(start_pos)
+    #print(start_pos)
     finalscore = score_matrix[start_pos[0]][start_pos[1]]
 
     # Traceback. Find the optimal path through the scoring matrix. This path
@@ -169,7 +169,7 @@ def SmithWaterman(seq1, seq2):
     seq1_aligned, seq2_aligned = traceback(score_matrix, start_pos, seq1, seq2, pointer_matrix)
     assert len(seq1_aligned) == len(seq2_aligned), 'aligned strings are not the same size'
 
-#    # Print the results. The printing follows the format of BLAST results
+#    # Print the results to debug. The printing follows the format of BLAST results
 #    # as closely as possible.
 #    alignment_str, idents, gaps, mismatches = alignment_string(seq1_aligned, seq2_aligned)
 #    alength = len(seq1_aligned)
@@ -184,7 +184,8 @@ def SmithWaterman(seq1, seq2):
 #        seq2_slice = seq2_aligned[i:i+60]
 #        print('Sbjct  {0:<4}  {1}  {2:<4}'.format(i + 1, seq2_slice, i + len(seq2_slice)))
 #        print()
-    
+#        print(finalscore)
+#    
     return finalscore, seq1_aligned, seq2_aligned, score_matrix
 
 def parse_cmd_line():
@@ -224,13 +225,13 @@ def create_score_matrix(rows, cols, seq1, seq2):
     for i in range(1, rows):
         for j in range(1, cols):
             #print([i,j])
-            score = calc_score(score_matrix, i, j, seq1, seq2)
+            score, pointer = calc_score(score_matrix, i, j, seq1, seq2, pointer_matrix)
             if score > max_score:
                 max_score = score
                 max_pos   = (i, j)
 
             score_matrix[i][j] = score
-            pointer_matrix[i][j] = lastmove
+
 
     assert max_pos is not None, 'the x, y position with the highest score was not found'
     #print(pointer_matrix)
@@ -239,7 +240,7 @@ def create_score_matrix(rows, cols, seq1, seq2):
     return score_matrix, max_pos, pointer_matrix
 
 
-def calc_score(matrix, x, y, seq1, seq2):
+def calc_score(matrix, x, y, seq1, seq2, pointer_matrix):
     '''Calculate score for a given x, y position in the scoring matrix.
     The score is based on the up, left, and upper-left neighbors.
     '''
@@ -253,24 +254,29 @@ def calc_score(matrix, x, y, seq1, seq2):
     
     newposscore = SCORES[scoredict[seq1[x-1].upper()]][scoredict[seq2[y-1].upper()]]
     # use string.upper() to convert all AAs to upper case so their keys are recognized in the dictionary
-
+    
+    # calculate diagnal score (add match/mismatch to diag score)
     diag_score = matrix[x - 1][y - 1] + newposscore
     
-    global lastmove # keep track of last move between rounds so we know whether the gap has already been opened
-    if lastmove == 2: 
+    #global lastmove # keep track of last move between rounds so we know whether the gap has already been opened
+    
+    # calculate up score
+    if pointer_matrix[x-1][y] == 2: # if upper score came from a gap from up
         up_score   = matrix[x - 1][y] - gapextension # extend gap vertically
-        left_score = matrix[x][y - 1] - gapopening # open new gap horizontally
-    elif lastmove == 3:
+    else: # upper score came from gap left or diag, so open new gap
         up_score   = matrix[x - 1][y] - gapopening # open new gap vertically
+        
+    # calculate left score
+    if pointer_matrix[x][y-1] == 3: # if left score came from a gap from left
         left_score = matrix[x][y - 1] - gapextension # extend gap horizontally
-    else: # last move was diagonal or 0, so need to open gap
-        up_score   = matrix[x - 1][y] - gapopening
-        left_score = matrix[x][y - 1] - gapopening
+    else: # left score came from gap up or diag, so open new gap
+        left_score = matrix[x][y - 1] - gapopening # open new gap horizontally
     
     scorechoices = [0, diag_score, up_score, left_score]
     lastmove = scorechoices.index(max(scorechoices)) # update last move
+    pointer_matrix[x][y] = lastmove
     
-    return max(0, diag_score, up_score, left_score)
+    return max(scorechoices), pointer_matrix
 
 
 def traceback(score_matrix, start_pos, seq1, seq2, pointer_matrix):
@@ -314,6 +320,14 @@ def traceback(score_matrix, start_pos, seq1, seq2, pointer_matrix):
 
 #    aligned_seq1.append(seq1[x - 1])
 #    aligned_seq2.append(seq2[y - 1])
+
+# Print statements to debug traceback
+#    print('end traceback')    
+#    print(start_pos)
+#    print('start traceback')
+#    print((x,y))
+#    print(pointer_matrix[x][y])
+#    print(score_matrix[x][y])
 
     # aligned from end to start, now reverse order of sequence to be from start to end
     return ''.join(reversed(aligned_seq1)), ''.join(reversed(aligned_seq2))
@@ -744,7 +758,7 @@ b.close()
 
 
 def calc_score_aligned(matrix, seq1_aligned, seq2_aligned):
-    '''Calculate the score of an aligned sequence pair.'''
+    '''Calculate the score of an aligned sequence pair. Takes any scoring matrix as an input.'''
 
     assert len(seq1_aligned) == len(seq2_aligned), 'aligned strings are not the same size'
     
@@ -753,28 +767,163 @@ def calc_score_aligned(matrix, seq1_aligned, seq2_aligned):
     # keep track of match/mismatch or gap to know when to add gap      opening or   extension penalty
     
     # Take sum of scores over each position in the alignment
+    #print(len(seq1_aligned))
     for i in range(len(seq1_aligned)):
 
-        if seq1_aligned[i] == '-' or seq2_aligned[i] == '-': # currently a gap
-            lastalign = 'gap'
-            if lastalign == 'match':
+#        if seq1_aligned[i] == '-' or seq2_aligned[i] == '-': # currently a gap
+#            if lastalign == 'match':
+#                score -= gapopening # open new gap
+#            elif lastalign == 'gap':
+#                score -= gapextension # extend a gap
+#            else:
+#                print('error')
+#            lastalign = 'gap'
+        if seq1_aligned[i] == '-': #gap in 1
+            if lastalign == 'match' or lastalign == 'gap2':
                 score -= gapopening # open new gap
-            elif lastalign == 'gap':
+            elif lastalign == 'gap1':
                 score -= gapextension # extend a gap
             else:
                 print('error')
+            lastalign = 'gap1'
+        elif seq2_aligned[i] == '-': #gap in 2
+            if lastalign == 'match' or lastalign == 'gap1':
+                score -= gapopening # open new gap
+            elif lastalign == 'gap2':
+                score -= gapextension # extend a gap
+            else:
+                print('error')
+            lastalign = 'gap2'
         else: # currently a match or a mismatch
             lastalign = 'match'
-            score += SCORES[scoredict[seq1_aligned[i].upper()]][scoredict[seq2_aligned[i].upper()]]
+            score += matrix[scoredict[seq1_aligned[i].upper()]][scoredict[seq2_aligned[i].upper()]]
     # use string.upper() to convert all AAs to upper case so their keys are recognized in the dictionary
         #print(score)
 
     return score
     
-#scoretest = calc_score_aligned(SCORES, PosStatic[0][0], PosStatic[0][1])
+#scoretest = calc_score_aligned(SCORES, PosStatic[10][0], PosStatic[10][1])
 ##score = calc_score_aligned(SCORES, 'ARNRA', 'ARNAA')
 #print('score')
 #print(scoretest)
 #score = 25, matches max score from score matrix correctly
 
+#%%
+## Use simulated annealing to optimize score matrix. This involves:
+#1. evaluate objective funciton
+#    - score all static sequences
+#    - find TP and FP rates
+#    - F = sum(TP(F=0, .1, .2, .3)), max value is 4
+#2. make changes to the matrix
+#3. reevaluate objective function
+#    - if better, accept
+#    - if worse, accept with P(temp)
+#4. update temperature 
+
+
+def evaluate_scores(matrix, AlignedList):
+    '''Input scoring matrix and list of aligned sequences. Output a list of scores.'''
+    
+    # First find scores of all static sequences
+    allscores = np.zeros(len(AlignedList))
+    for i in range(len(AlignedList)): # iterate through each aligned pair
+        seq1 = AlignedList[i][0] # first sequence in the pair
+        seq2 = AlignedList[i][1] # second sequence in the pair
+        score = calc_score_aligned(matrix, seq1, seq2)
+        allscores[i] = score
+    
+    return(allscores)    
+
+# Try evaluating scores, make sure they match scores from original smith waterman
+#posscores = evaluate_scores(PAM100, PosStatic)
+#negscores = evaluate_scores(PAM100, NegStatic)
+
+def objective(PosAligned, NegAligned, matrix):
+    ''' Take static positive and negative aligned sequences and a scoring matrix as inputs. Output a value of the objective function.
+    Objective function: F = sum(TP(F=0, .1, .2, .3)), max value is 4
+    '''
+    
+    # 1) Score all static sequences
+    posscores = evaluate_scores(matrix, PosAligned)
+    negscores = evaluate_scores(matrix, NegAligned)
+    # use PosStatic for PosAligned and NegStatic for NegAligned
+    
+    # 2) Find TP and FP rates use ROC function
+    # concatenate all positive and negative scores to use as sklearn ROC input
+    actualpos = np.ones(len(posscores)) # true positive scores are "1'
+    actualneg = np.zeros(len(negscores)) # true negative scores are '0'
+    actual = np.hstack((actualpos,actualneg)) # array of [1,1,1,1,...0,0,0]
+    predictions = np.hstack((posscores, negscores)) # predicted values are the scores output by Smith-Waterman, concatenate to [pos scores, ...neg scores] where each row is the result from one score matrix
+    
+    # Use sklearn's ROC curve function to get TP and FP rates
+    FP, TP, thresholds = roc_curve(actual, predictions)
+    #roc_auc = auc(false_positive_rate, true_positive_rate)
+    
+    # 3) Evaluate the objective function F
+    # Find index of false positive that is nearest to target FP rate
+    fp0 = np.where(FP >= 0)[0][0]
+    fp1 = np.where(FP >= 0.1)[0][0]
+    fp2 = fp0 = np.where(FP >= 0.2)[0][0]
+    fp3 = np.where(FP >= 0.3)[0][0]
+    
+    # Evaluate the objective function
+    F = TP[fp0] + TP[fp1] + TP[fp2] + TP[fp3]
+    
+    return F
+
+# Test objective function outpu
+#obj = objective(PosStatic, NegStatic, PAM100)
+
+import random
+
+def update_matrix(matrix):
+    'Input a starting matrix. Make random changes. Output new matrix.'''
+    for i in range(len(matrix)):
+        for j in range(len(matrix)):
+            if j >=i: # to make symmetrical, only change top half and set bottom half equal to its match
+                # bound the values in the matrix to values ranging from -9 to 12 (min and max of original PAM matrix)
+                if matrix[i][j] < -8:
+                    change = random.choice([0,0,1])
+                elif matrix[i][j] > 11:
+                    change = random.choice([-1,0,0])
+                else:
+                    change = np.random.choice([-1,0,1])
+                matrix[i][j] += change
+                matrix[j][i] = matrix[i][j]
+    updated = matrix
+    return updated
+    
+def simulated_annealing(PosAligned, NegAligned, startmat):
+    ''' Optimize matrix from starting matrix and static aligned sequences. Goal to achieve the highest value for F (max is 4).
+    '''
+    T = np.linspace(20,0,1000) # Temperature decreases with each iteration until it reaches 0. As T drops, lowere the chance of accepting lower value for F. Gives array of maxT, minT, number of points.
+    F = objective(PosAligned, NegAligned, startmat) # Initialize objective function
+    bestmat = np.empty_like(startmat)
+    bestmat[:] = startmat # initialize best matrix to the starting matrix by duplicating it (don't mutate the original matrix)
+    print(F)
+    
+    allF = np.zeros(len(T))
+    
+    for i in range(len(T)): # iterate through each temp as it cools
+        temp = T[i] # update temperature
+        newmat = update_matrix(bestmat)   # update the matrix
         
+        # reevaluate objective function with new matrix
+        newF = objective(PosAligned, NegAligned, newmat)
+        if newF > F:
+            bestmat = newmat # if better, always accept
+            F = newF
+#            print('got better')
+#            print(temp)
+        elif random.random() < temp/100: # if worse, accept with probability proportional to T. Reduce chance of accepting lower F from maxT% to 0% as the system cools
+            bestmat = newmat
+            F = newF
+        # else: the matrix will stay the same (bestmat doesn't change)
+        allF[i] = F
+    print(allF[-1])
+
+    return bestmat, allF
+
+bestmat, allF  = simulated_annealing(PosStatic, NegStatic, PAM100)
+# Cooling schedule,
+# Matrix updates
