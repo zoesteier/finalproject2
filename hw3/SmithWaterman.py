@@ -122,15 +122,15 @@ print("Read in %d sequences"%len(sequences))
 # (c) 2013 Ryan Boehning
 
 #%% Implement Smith-Waterman algorithm
-'''A Python implementation of the Smith-Waterman algorithm for local alignment
-of nucleotide sequences.
+'''An implementation of the Smith-Waterman algorithm for local alignment
+of sequences.
 '''
 
-import argparse
-import os
-import re
-import sys
-import unittest
+#import argparse
+#import os
+#import re
+#import sys
+#import unittest
 
 
 # Use scores from the scoring matrix.
@@ -141,24 +141,16 @@ seq1     = None
 seq2     = None
 lastmove = None
 
-def SmithWaterman(seq1, seq2):
-    '''Input two sequences, output a final score of the algined sequences and the two aligned sequences as strings.
+def SmithWaterman(seq1, seq2, SCORES):
+    '''Input two sequences, output a final score of the algined sequences and the two aligned sequences as strings. SCORES is the substitution scoring matrix (e.g. BLOSUM50)
     '''
-#def main():
-#    try:
-#        seq1, seq2 = parse_cmd_line()
-##        print(seq1)
-##        print(seq2)
-#    except ValueError as err:
-#        print('error:', err)
-#        return
 
     # Create a matrix to store scores (first sequence vertical, second horizontal, with an extra row and column for the gap character)
     rows = len(seq1) + 1
     cols = len(seq2) + 1
 
     # Initialize the scoring matrix.
-    score_matrix, start_pos, pointer_matrix = create_score_matrix(rows, cols, seq1, seq2)
+    score_matrix, start_pos, pointer_matrix = create_score_matrix(rows, cols, seq1, seq2, SCORES)
     #print(score_matrix[start_pos[0]][start_pos[1]]) #confirm that find max score
 #    print(score_matrix)
     #print(start_pos)
@@ -204,7 +196,7 @@ def parse_cmd_line():
     return seq1, seq2
 
 
-def create_score_matrix(rows, cols, seq1, seq2):
+def create_score_matrix(rows, cols, seq1, seq2, SCORES):
     '''Create a matrix of scores representing trial alignments of the two sequences.
     Sequence alignment can be treated as a graph search problem. This function
     creates a graph (2D matrix) of scores, which are based on trial alignments
@@ -225,7 +217,7 @@ def create_score_matrix(rows, cols, seq1, seq2):
     for i in range(1, rows):
         for j in range(1, cols):
             #print([i,j])
-            score, pointer = calc_score(score_matrix, i, j, seq1, seq2, pointer_matrix)
+            score, pointer = calc_score(score_matrix, i, j, seq1, seq2, pointer_matrix, SCORES)
             if score > max_score:
                 max_score = score
                 max_pos   = (i, j)
@@ -240,7 +232,7 @@ def create_score_matrix(rows, cols, seq1, seq2):
     return score_matrix, max_pos, pointer_matrix
 
 
-def calc_score(matrix, x, y, seq1, seq2, pointer_matrix):
+def calc_score(matrix, x, y, seq1, seq2, pointer_matrix, SCORES):
     '''Calculate score for a given x, y position in the scoring matrix.
     The score is based on the up, left, and upper-left neighbors.
     '''
@@ -425,9 +417,9 @@ class ScoreMatrixTest(unittest.TestCase):
 ### Try an alignment
 #seq1 = sequences[0]
 #seq2 = sequences[1]
-##seq1 = 'DARNRAA'
-##seq2 = 'CARNAA'
-#final, first, second, scorematrix = SmithWaterman(seq1, seq2)
+###seq1 = 'DARNRAA'
+###seq2 = 'CARNAA'
+#final, first, second, scorematrix = SmithWaterman(seq1, seq2, PAM100)
 #print(final)
 # For BLOSUM50 get 47 with gaps (9,4)
 # For PAM100 get 25 with gaps(9,4)
@@ -461,7 +453,7 @@ def readSeqPairs(filepath):
 #Negpairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Negpairs.txt')
 #print(Negpairs)
 
-def alignSeqPairs(pairlist):
+def alignSeqPairs(pairlist, SCORES):
     '''Align sequence pairs contained in a list. Output a list of scores from those sequences.
     '''
     
@@ -479,7 +471,7 @@ def alignSeqPairs(pairlist):
         seq2 = sequences[sequencenames.index(seq2name)]
         
         # Run the Smith-Waterman algorithm for sequence pair i
-        score, seq1_aligned, seq2_aligned = SmithWaterman(seq1, seq2)
+        score, seq1_aligned, seq2_aligned, score_matrix = SmithWaterman(seq1, seq2, SCORES)
         #scorenormalized = score/min(len(seq1), len(seq2)) # normalize score by dividing by the length of the shorter sequence
         
         scorelist[i] = score
@@ -509,7 +501,7 @@ def alignSeqPairs(pairlist):
 
 
 # What is the best (lowest) false positive rate you can achieve by varying gap opening/extension penalties with BLOSUM50? Vary gap openening (1 to 20) and gap extension( 1 to 5) with BLOSUM50 to find best gap penalty combination.
-def findBestPenalties():
+def findBestPenalties(SCORES = BLOSUM50):
     '''To find the best gap opening and extension penalites, vary the penalties and track lowest false positive rate.
     '''
     lowestfprate = 1 # initialize false positive rate (highest: 100% fp)
@@ -526,8 +518,8 @@ def findBestPenalties():
             print('Testing open = ', gapopening, 'and extension = ', gapextension)
             # Make sorted lists of scores for positive and negative pairs
             
-            Posscores = np.sort(alignSeqPairs(Pospairs))
-            Negscores = np.sort(alignSeqPairs(Negpairs))
+            Posscores = np.sort(alignSeqPairs(Pospairs, SCORES))
+            Negscores = np.sort(alignSeqPairs(Negpairs, SCORES))
             
             # Find the threshold value that 70% of positive scores fall above
             threshold = Posscores[int(np.ceil(0.3*len(Posscores)))]
@@ -544,19 +536,19 @@ def findBestPenalties():
             
     return bestopen, bestextension, lowestfprate
         
-#gapopen, gapextension, fprate = findBestPenalties()
-#print(gapopen), best = 9
-#print(gapextension), best =  4
-#print(fprate), best =  0.16
+#gapopen, gapextension, fprate = findBestPenalties(PAM100)
+#print(gapopen) # best = 6 for BLOSUM50, best = 13 for PAM100
+#print(gapextension) # best =  5 for BLOSUM50, best = 1 for PAM100
+#print(fprate) # best =  0.2 for BLOSUM50, best = 0.1 for PAM100
 
 #%%
 # Question 2:
-    '''
-    Plot ROC curve using gap penalties determined in question 1. Which scoring matrix performs best? 
-    1. Find false positive rate at true positive rate = 0.7 for each scoring matrix >
-    2. Which matrix performs best? >
-    3. Create ROC curve (TP vs FP) showing plot from each matrix >
-    '''
+#  '''
+#    Plot ROC curve using gap penalties determined in question 1. Which scoring matrix performs best? 
+#    1. Find false positive rate at true positive rate = 0.7 for each scoring matrix >
+#    2. Which matrix performs best? >
+#    3. Create ROC curve (TP vs FP) showing plot from each matrix >
+#    '''
 
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
@@ -565,14 +557,15 @@ import matplotlib.pyplot as plt
 #actual = [1,1,1,0,0,0]
 #predictions = [0.9,0.9,0.9,0.1,0.1,0.1]
 
-gapopening = 9
-gapextension = 4
+# PAM100 open = 13, extension  = 1 
+gapopening = 13 #6  #9
+gapextension = 1 #5  #4
 
 def findBestMatrix():
     # Find the score matrix with the lowest false positive rate
     
     # Use gap scores determined above
-    global SCORES
+    #global SCORES
     SCORE_matrices = [BLOSUM50, BLOSUM62, PAM100, PAM250, MATIO]
     
     # Find the matrix with lowest FP rate at TP rate = 0.7
@@ -583,15 +576,15 @@ def findBestMatrix():
     Negpairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Negpairs.txt')
     
     # store scores from all score matrices in an array
-    allposscores = np.zeros((len(SCORE_matrices), 1))
-    allnegscores = np.zeros((len(SCORE_matrices), 1))
+    allposscores = np.zeros((len(SCORE_matrices), len(Pospairs)))
+    allnegscores = np.zeros((len(SCORE_matrices), len(Pospairs)))
     
     for i in range(len(SCORE_matrices)):
         SCORES = SCORE_matrices[i]
         print('Testing matrix: ', i)
         # Make sorted lists of scores for positive and negative pairs
-        Posscores = np.sort(alignSeqPairs(Pospairs))
-        Negscores = np.sort(alignSeqPairs(Negpairs))
+        Posscores = np.sort(alignSeqPairs(Pospairs, SCORES))
+        Negscores = np.sort(alignSeqPairs(Negpairs, SCORES))
         
         # add scores to allscores 
         allposscores[i] = Posscores
@@ -611,13 +604,17 @@ def findBestMatrix():
             
     return lowestfprate, bestmatrixindex
 
-#fp, bestmat = findBestMatrix(), fp = 0.12 for bestmat = 2 (PAM100)
+#fp, bestmat = findBestMatrix()  #, fp = 0.14 for bestmat = 2 (PAM100)
 
 def plotROC():
     # Plot ROC curve with values from each score matrix
     
     #global SCORES
-    SCORE_matrices = [BLOSUM50, BLOSUM62, PAM100, PAM250, MATIO]
+    # question 1.2
+    #SCORE_matrices = [BLOSUM50, BLOSUM62, PAM100, PAM250, MATIO]
+    
+    #question 2.2
+    SCORE_matrices = [PAM100, bestmat]
     
     # Make lists of positive and negative sequence pairs
     Pospairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Pospairs.txt')
@@ -632,8 +629,8 @@ def plotROC():
         print('Testing matrix: ', i)
         
 #        # Make sorted lists of scores for positive and negative pairs
-#        posunsort, Posscorelengths = alignSeqPairs(Pospairs)
-#        negunsort, Negscorelengths = alignSeqPairs(Negpairs)
+#        posunsort, Posscorelengths = alignSeqPairs(Pospairs, SCORES)
+#        negunsort, Negscorelengths = alignSeqPairs(Negpairs, SCORES)
 #        print(np.mean(Posscorelengths))
 #        print (np.mean(Negscorelengths))
 #        
@@ -642,8 +639,8 @@ def plotROC():
 #        Negscores = np.sort(negunsort)
         
         # For unnormalized
-        Posscores = np.sort(alignSeqPairs(Pospairs))
-        Negscores = np.sort(alignSeqPairs(Negpairs))
+        Posscores = np.sort(alignSeqPairs(Pospairs, SCORES))
+        Negscores = np.sort(alignSeqPairs(Negpairs, SCORES))
         
         # add scores to allscores 
         allposscores[i] = Posscores
@@ -672,12 +669,25 @@ def plotROC():
         TPrates[i] = true_positive_rate
         AUCs[i] = roc_auc
     
+    # question 1.2
+#    plt.title('Receiver Operating Characteristic (ROC Curve)')
+#    plt.plot(FPrates[0], TPrates[0], label = ('BLOSUM50, AUC = %0.2f'% AUCs[0]))
+#    plt.plot(FPrates[1], TPrates[1], label = ('BLOSUM62, AUC = %0.2f'% AUCs[1]))
+#    plt.plot(FPrates[2], TPrates[2], label = ('PAM100, AUC = %0.2f'% AUCs[2]))
+#    plt.plot(FPrates[3], TPrates[3], label = ('PAM250, AUC = %0.2f'% AUCs[3]))
+#    plt.plot(FPrates[4], TPrates[4], label = ('MATIO, AUC = %0.2f'% AUCs[4]))
+#    #label='AUC = %0.2f'% roc_auc)
+#    plt.legend(loc='lower right')
+#    plt.plot([0,1],[0,1],'r--')
+#    plt.xlim([0,1])
+#    plt.ylim([0,1])
+#    plt.ylabel('True Positive Rate')
+#    plt.xlabel('False Positive Rate')
+
+    # question 2.2
     plt.title('Receiver Operating Characteristic (ROC Curve)')
-    plt.plot(FPrates[0], TPrates[0], label = ('BLOSUM50, AUC = %0.2f'% AUCs[0]))
-    plt.plot(FPrates[1], TPrates[1], label = ('BLOSUM62, AUC = %0.2f'% AUCs[1]))
-    plt.plot(FPrates[2], TPrates[2], label = ('PAM100, AUC = %0.2f'% AUCs[2]))
-    plt.plot(FPrates[3], TPrates[3], label = ('PAM250, AUC = %0.2f'% AUCs[3]))
-    plt.plot(FPrates[4], TPrates[4], label = ('MATIO, AUC = %0.2f'% AUCs[4]))
+    plt.plot(FPrates[0], TPrates[0], label = ('PAM100, AUC = %0.2f'% AUCs[0]))
+    plt.plot(FPrates[1], TPrates[1], label = ('Best matrix following optimization, AUC = %0.2f'% AUCs[1]))
     #label='AUC = %0.2f'% roc_auc)
     plt.legend(loc='lower right')
     plt.plot([0,1],[0,1],'r--')
@@ -695,10 +705,11 @@ def plotROC():
 
 # Using the best gap penalties and matrix from part 1, create an alignment for each positive pair and negative pair of sequences.
 
-# Gap opening penalty is 9, gap extension penalty is 4 (see above)
+# Gap opening penalty is 13, gap extension penalty is 1 (see above)
 # Best matrix is PAM100 (see above)
+
 SCORES = PAM100
-def alignSeqPairsStatic(pairlist):
+def alignSeqPairsStatic(pairlist, SCORES):
     '''Align sequence pairs contained in a list to generate a static alignment. Output a list of scores from those sequences. Also return a list of lists containing aligned sequences.
     '''
     
@@ -713,7 +724,7 @@ def alignSeqPairsStatic(pairlist):
         seq2 = sequences[sequencenames.index(seq2name)]
         
         # Run the Smith-Waterman algorithm for sequence pair i
-        score, seq1_aligned, seq2_aligned, score_matrix = SmithWaterman(seq1, seq2)
+        score, seq1_aligned, seq2_aligned, score_matrix = SmithWaterman(seq1, seq2, SCORES)
         
         # Collect the scores and aligned sequences in lists
         scorelist[i] = score
@@ -722,14 +733,14 @@ def alignSeqPairsStatic(pairlist):
     # For unnormalized scores   
     return scorelist, alignedsequences
 
-def makeStaticAlignments():  
+def makeStaticAlignments(SCORES):  
 # Make lists of positive and negative sequence pairs from the best matrix/penalties determined above.
     Pospairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Pospairs.txt')
     Negpairs = readSeqPairs('C:\\Users\\Zoë\\Documents\\GitHub\\hw3\\data\\Negpairs.txt')
         
     # For unnormalized
-    Posscores, PosAlignedSeqs = alignSeqPairsStatic(Pospairs)
-    Negscores, NegAlignedSeqs = alignSeqPairsStatic(Negpairs)
+    Posscores, PosAlignedSeqs = alignSeqPairsStatic(Pospairs, SCORES)
+    Negscores, NegAlignedSeqs = alignSeqPairsStatic(Negpairs, SCORES)
     
     return PosAlignedSeqs, NegAlignedSeqs, Posscores, Negscores
   
@@ -737,20 +748,27 @@ def makeStaticAlignments():
 #PosStatic, NegStatic, PosStaticScores, NegStaticScores = makeStaticAlignments()
 #
 import pickle # this will write the aligned lists to a file to use later
-#with open("PosStatic.txt", "wb") as fp:   #Pickling
+#with open("PosStaticN.txt", "wb") as fp:   #Pickling
 #    pickle.dump(PosStatic, fp)
 #fp.close()
 #
-#with open("NegStatic.txt", "wb") as fp:   #Pickling
+#with open("NegStaticN.txt", "wb") as fp:   #Pickling
 #    pickle.dump(NegStatic, fp)
 #fp.close()
 
 # Read the static alignment list by "unpickling" from the file
-with open("PosStatic.txt", "rb") as a:   # Unpickling
+with open("PosStaticN.txt", "rb") as a:   # Unpickling
     PosStatic = pickle.load(a)
 a.close()
-with open("NegStatic.txt", "rb") as b:
+with open("NegStaticN.txt", "rb") as b:
     NegStatic = pickle.load(b)
+b.close()
+
+with open("PosStatic.txt", "rb") as a:   # Unpickling
+    oldPos = pickle.load(a)
+a.close()
+with open("NegStatic.txt", "rb") as b:
+    oldNeg = pickle.load(b)
 b.close()
 #print(PosStatic)
 #print(' ')
@@ -808,6 +826,13 @@ def calc_score_aligned(matrix, seq1_aligned, seq2_aligned):
 #print(scoretest)
 #score = 25, matches max score from score matrix correctly
 
+# Test to make sure scores calculated here match scores calculated by smith waterman
+#  tot = 0
+#for i in range(len(negscores)):
+#    if negscores[i] == NegStaticScores[i]:
+#        tot +=1
+#print(tot) # all 50 scores for pos and neg pairs are the same
+
 #%%
 ## Use simulated annealing to optimize score matrix. This involves:
 #1. evaluate objective funciton
@@ -863,8 +888,12 @@ def objective(PosAligned, NegAligned, matrix):
     # Find index of false positive that is nearest to target FP rate
     fp0 = np.where(FP >= 0)[0][0]
     fp1 = np.where(FP >= 0.1)[0][0]
-    fp2 = fp0 = np.where(FP >= 0.2)[0][0]
+    fp2 = np.where(FP >= 0.2)[0][0]
     fp3 = np.where(FP >= 0.3)[0][0]
+#    print(TP[fp0])
+#    print(TP[fp1])
+#    print(TP[fp2])
+#    print(TP[fp3])
     
     # Evaluate the objective function
     F = TP[fp0] + TP[fp1] + TP[fp2] + TP[fp3]
@@ -873,57 +902,237 @@ def objective(PosAligned, NegAligned, matrix):
 
 # Test objective function outpu
 #obj = objective(PosStatic, NegStatic, PAM100)
+#print(obj) # 2.06
 
 import random
 
 def update_matrix(matrix):
     'Input a starting matrix. Make random changes. Output new matrix.'''
-    for i in range(len(matrix)):
-        for j in range(len(matrix)):
-            if j >=i: # to make symmetrical, only change top half and set bottom half equal to its match
-                # bound the values in the matrix to values ranging from -9 to 12 (min and max of original PAM matrix)
-                if matrix[i][j] < -8:
-                    change = random.choice([0,0,1])
-                elif matrix[i][j] > 11:
-                    change = random.choice([-1,0,0])
-                else:
-                    change = np.random.choice([-1,0,1])
-                matrix[i][j] += change
-                matrix[j][i] = matrix[i][j]
+    
+#    # Try changing all values. This always makes a worse matrix.
+#    for i in range(len(matrix)):
+#        for j in range(len(matrix)):
+#            if j >=i: # to make symmetrical, only change top half and set bottom half equal to its match
+#                # bound the values in the matrix to values ranging from -9 to 12 (min and max of original PAM matrix)
+#                if matrix[i][j] < -8:
+#                    change = random.choice([0,0,1])
+#                elif matrix[i][j] > 11:
+#                    change = random.choice([-1,0,0])
+#                else:
+#                    change = np.random.choice([-1,0,1])
+#                matrix[i][j] += change
+#                matrix[j][i] = matrix[i][j]
+#    updated = matrix
+#    return updated
+
+    # Try changing one value at a time. Choose random value in top of matrix.
+
+#    random.seed(50)
+    i = random.choice(range(len(matrix)-1)) # random row
+    j = random.choice(range(i, len(matrix)-1)) # random column > row
+    # to make symmetrical, only change top half and set bottom half equal to its match
+    # bound the values in the matrix to values ranging from -9 to 12 (min and max of original PAM matrix)
+    
+    if i == j:
+        return(matrix) # don't change the diagonal because this makes things worse
+    if matrix[i][j] < -8:
+        change = 1
+    elif matrix[i][j] > 11:
+        change = -1
+    else:
+        change = np.random.choice([-1,1])
+    matrix[i][j] += change
+    matrix[j][i] = matrix[i][j]
     updated = matrix
     return updated
     
 def simulated_annealing(PosAligned, NegAligned, startmat):
     ''' Optimize matrix from starting matrix and static aligned sequences. Goal to achieve the highest value for F (max is 4).
     '''
-    T = np.linspace(20,0,1000) # Temperature decreases with each iteration until it reaches 0. As T drops, lowere the chance of accepting lower value for F. Gives array of maxT, minT, number of points.
-    F = objective(PosAligned, NegAligned, startmat) # Initialize objective function
+    #numsteps = 100
+    
+    #T = np.linspace(20,0,1000) # Temperature decreases with each iteration until it reaches 0. As T drops, lowere the chance of accepting lower value for F. Gives array of maxT, minT, number of points.
+    
+    # try exponential decay: vary T from e^3 =20 to ^-2 = 0.135
+    #T = np.logspace(2,-1, 10000, base = np.exp(1))
+    
+    # the full T
+    T = np.logspace(.6,-30, 10000, base = 10)
+    # test T
+    #T = np.logspace(.6,-1, 10, base = 10)
+    #F = objective(PosAligned, NegAligned, startmat) # Initialize objective function
     bestmat = np.empty_like(startmat)
     bestmat[:] = startmat # initialize best matrix to the starting matrix by duplicating it (don't mutate the original matrix)
+    F = objective(PosAligned, NegAligned, bestmat) # Initialize objective function
     print(F)
     
     allF = np.zeros(len(T))
     
     for i in range(len(T)): # iterate through each temp as it cools
         temp = T[i] # update temperature
-        newmat = update_matrix(bestmat)   # update the matrix
-        
+        tempbest = np.copy(bestmat)
+        newmat = update_matrix(tempbest)   # update the matrix
+
         # reevaluate objective function with new matrix
         newF = objective(PosAligned, NegAligned, newmat)
         if newF > F:
-            bestmat = newmat # if better, always accept
+            if np.array_equal(newmat, bestmat):
+                print('error')
+            bestmat = np.empty_like(newmat)
+            bestmat[:] = newmat # if better, always accept
             F = newF
 #            print('got better')
 #            print(temp)
         elif random.random() < temp/100: # if worse, accept with probability proportional to T. Reduce chance of accepting lower F from maxT% to 0% as the system cools
-            bestmat = newmat
+            if np.array_equal(newmat, bestmat):
+                print('error')
+            bestmat = np.empty_like(newmat)
+            bestmat[:] = newmat
             F = newF
         # else: the matrix will stay the same (bestmat doesn't change)
         allF[i] = F
+#        print('F in anneal: ')
+#        print(F)
+#        print('actual F')
+#        act = objective(PosAligned, NegAligned, bestmat)
+#        print(act)
+#        print(' ')
+#    print('final F is wrong')
     print(allF[-1])
 
     return bestmat, allF
 
-bestmat, allF  = simulated_annealing(PosStatic, NegStatic, PAM100)
-# Cooling schedule,
-# Matrix updates
+#bestmat, allF  = simulated_annealing(PosStatic, NegStatic, PAM100)
+#print(' ')
+# Best matrix has F = 2.4. Save as a text file for later.
+#same = objective(PosStatic, NegStatic, bestmat)
+#print('same')
+#print(same)
+
+#with open("testbest.txt", "wb") as fp:
+#    pickle.dump(bestmat, fp)
+#fp.close()
+
+with open('testbest.txt.', 'rb') as best:
+    testbest = pickle.load(best)
+best.close()
+
+#Ftest = objective(PosStatic, NegStatic, testbest)
+#print('test end')
+#print(Ftest)
+#plotROC()
+
+#%%
+# Generate new static alignements from optimized matrix
+#PosStaticOpt, NegStaticOpt, PosStaticScoresOpt, NegStaticScoresOpt = makeStaticAlignments(testbest)
+
+#with open("PosStaticOpt.txt", "wb") as fp:   #Pickling
+#    pickle.dump(PosStatic, fp)
+#fp.close()
+#
+#with open("NegStaticOpt.txt", "wb") as fp:   #Pickling
+#    pickle.dump(NegStatic, fp)
+#fp.close()
+
+with open("PosStaticOpt.txt", "rb") as a:   # Unpickling
+    PosStaticOpt = pickle.load(a)
+a.close()
+with open("NegStaticOpt.txt", "rb") as b:
+    NegStaticOpt = pickle.load(b)
+b.close()
+
+
+
+
+
+#%% Try optimization with MATIO
+#matiobest, allFmatio  = simulated_annealing(PosStatic, NegStatic, MATIO)
+#with open("matiobest.txt", "wb") as fp:
+#    pickle.dump(matiobest, fp)
+#fp.close()
+
+with open('matiobest.txt.', 'rb') as best:
+    matiobest = pickle.load(best)
+best.close()
+
+## generate static matio alignments
+#PosStaticMatio, NegStaticMatio, PosStaticScoresMatio, NegStaticScoresMatio = makeStaticAlignments(matiobest)
+#
+#with open("PosStaticMatio.txt", "wb") as fp:   #Pickling
+#    pickle.dump(PosStaticMatio, fp)
+#fp.close()
+#
+#with open("NegStaticMatio.txt", "wb") as fp:   #Pickling
+#    pickle.dump(NegStaticMatio, fp)
+#fp.close()
+#
+with open("PosStaticMatio.txt", "rb") as a:   # Unpickling
+    PosStaticMatio = pickle.load(a)
+a.close()
+with open("NegStaticMatio.txt", "rb") as b:
+    NegStaticMatio = pickle.load(b)
+b.close()
+
+#%%
+# Plot optimized results
+def plotROCOpt():
+    # Plot ROC curve with values from each score matrix
+    
+#    SCORE_matrices = [PAM100, testbest]
+    SCORE_matrices = [MATIO, matiobest]
+    posalignments = [PosStatic, PosStaticMatio]
+    negalignments = [NegStatic, NegStaticMatio]
+    
+    allposscores = np.zeros((4, len(PosStatic)))
+    allnegscores = np.zeros((4, len(NegStatic)))
+    
+    pos = 0
+    for i in range(len(SCORE_matrices)):
+        for j in range(len(posalignments)):
+            allposscores[pos] = evaluate_scores(SCORE_matrices[i], posalignments[j])
+            pos+=1
+    pos = 0
+    for i in range(len(SCORE_matrices)):
+        for j in range(len(negalignments)):
+            allnegscores[pos] = evaluate_scores(SCORE_matrices[i], negalignments[j])
+            pos+=1    
+    
+    
+    # 2) Find TP and FP rates use ROC function
+    # concatenate all positive and negative scores to use as sklearn ROC input
+    actualpos = np.ones(len(PosStatic)) # true positive scores are "1'
+    actualneg = np.zeros(len(NegStatic)) # true negative scores are '0'
+    actual = np.hstack((actualpos,actualneg)) # array of [1,1,1,1,...0,0,0]
+    predictions = np.hstack((allposscores, allnegscores)) # predicted values are the scores output by Smith-Waterman, concatenate to [pos scores, ...neg scores] where each row is the result from one score matrix
+    
+    
+    FPrates = [[]]*4
+    TPrates = [[]]*4
+    AUCs = np.zeros((4, 1)) # store all AUC values (area under the ROC curve)
+    
+    # Use sklearn's ROC curve function
+    for i in range(4):
+        false_positive_rate, true_positive_rate, thresholds = roc_curve(actual, predictions[i])
+        roc_auc = auc(false_positive_rate, true_positive_rate)
+        
+        # collect values
+        FPrates[i] = false_positive_rate
+        TPrates[i] = true_positive_rate
+        AUCs[i] = roc_auc
+
+    # question 2.2
+    plt.title('ROC following realignment')
+    plt.plot(FPrates[0], TPrates[0], label = ('MATIO on PAM100-aligned, AUC = %0.2f'% AUCs[0]))
+    plt.plot(FPrates[1], TPrates[1], label = ('MATIO on optimized-MATIO-aligned sequences, AUC = %0.2f'% AUCs[1]))
+    plt.plot(FPrates[2], TPrates[2], label = ('Optimized-MATIO on PAM100-aligned sequences, AUC = %0.2f'% AUCs[2]))
+    plt.plot(FPrates[3], TPrates[3], label = ('Optimized-MATIO on optimized-MATIO-aligned sequences, AUC = %0.2f'% AUCs[3]))
+    #label='AUC = %0.2f'% roc_auc)
+    plt.legend(loc='lower right')
+    plt.plot([0,1],[0,1],'r--')
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    return
+    
+#plotROCOpt()

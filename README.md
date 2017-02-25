@@ -6,29 +6,14 @@ Status](https://travis-ci.org/zoesteier/hw3.svg?branch=master)](https://travis-c
 Skeleton for Smith-Waterman project.
 
 ## assignment
-1. Read in score matrices.
-2. Implement Smith-Waterman algorithm
+1. Implement Smith-Waterman algorithm.
+2. Optimize a scoring matrix using a simulated annealing algorithm.
 
 
 ## structure
 
-The main file that you will need to modify is `cluster.py` and the corresponding `test_cluster.py`. `utils.py` contains helpful classes that you can use to represent Active Sites. `io.py` contains some reading and writing files for interacting with PDB files and writing out cluster info.
+All functions are contained within SmithWaterman.py.
 
-```
-.
-├── README.md
-├── data
-│   ...
-├── hw2skeleton
-│   ├── __init__.py
-│   ├── __main__.py
-│   ├── cluster.py
-│   ├── io.py
-│   └── utils.py
-└── test
-    ├── test_cluster.py
-    └── test_io.py
-```
 
 ## usage
 
