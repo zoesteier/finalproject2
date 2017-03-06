@@ -1,7 +1,7 @@
-# HW3 Skeleton
+# Final Project
 
 [![Build
-Status](https://travis-ci.org/zoesteier/hw3.svg?branch=master)](https://travis-ci.org/zoesteier/hw3)
+Status](https://travis-ci.org/zoesteier/finalproject2.svg?branch=master)](https://travis-ci.org/zoesteier/finalproject2)
 
 Skeleton for Smith-Waterman project.
 
