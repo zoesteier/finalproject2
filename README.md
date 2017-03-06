@@ -3,7 +3,7 @@
 [![Build
 Status](https://travis-ci.org/zoesteier/finalproject2.svg?branch=master)](https://travis-ci.org/zoesteier/finalproject2)
 
-Skeleton for Smith-Waterman project.
+Skeleton for neural network project.
 
 ## assignment
 1. Implement Smith-Waterman algorithm.
