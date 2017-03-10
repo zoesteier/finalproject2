@@ -6,8 +6,8 @@ Status](https://travis-ci.org/zoesteier/finalproject2.svg?branch=master)](https:
 Skeleton for neural network project.
 
 ## assignment
-1. Implement Smith-Waterman algorithm.
-2. Optimize a scoring matrix using a simulated annealing algorithm.
+1. Implement an 8x3x8 autoencoder.
+2. Implement a neural network to identify transcription factor binding sites.
 
 
 ## structure
