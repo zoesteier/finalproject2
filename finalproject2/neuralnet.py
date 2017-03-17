@@ -22,7 +22,7 @@ class Layer:
         self.nextLayerNodes = nextLayerNodes # number of nodes in next layer
         self.weights = self.computeWeights() # weight matrix
         self.bias = self.computeBias() # bias vector
-        self.activation = self.activationfunction(self.inputLayer) # output vector of activations, one for each node
+        #self.activation = self.activationfunction(self.inputLayer) # output vector of activations, one for each node
     
     def computeWeights(self):
         """ Initialize weight matrix with small random values generated from a normal distribution with mean = 0 and sd = 0.01**2 in order to break symmetry."""
@@ -46,7 +46,7 @@ class Layer:
             for i in range(self.nodes): # rows are input nodes
                 for j in range(nextnodes): # columns are next layer nodes
                     # for testing, stop use random seed
-                    np.random.seed(3)
+                    #np.random.seed(3)
                     weights[i][j] = np.random.normal(0,0.01**2) 
             self.weights = weights
         return weights
@@ -66,24 +66,27 @@ class Layer:
             bias = np.zeros([self.nextLayerNodes,1]) # vector length is number of nodes in next layer
             for i in range(self.nextLayerNodes): 
                 # for testing, stop use random seed
-                np.random.seed(3)
+                #np.random.seed(3)
                 bias[i] = np.random.normal(0,0.01**2)
 
         return bias
         
-    def activationfunction(self, inputLayer):
-        """ Use the sigmoid function as the activation function for forward propagation. f(x) = 1/(1 + e^-x). Derivative of the sigmoid function is f'(x) = f(x)*(1 - f(x))."""
-        if type(inputLayer) == np.ndarray: # input layer is array of inputs
-            activation = np.transpose(np.array([inputLayer]))
-        else: # input layer is class Layer (a hidden layer)
-            x = inputLayer.activation # array of activation functions coming from input
-        #z = np.dot(x,self.weights) + self.bias # z = x*W + b, total weighted sum of inputs
-        
-        # weights and bias are from a layer are the output weights and bias of that layer. Calculate the input to the next layer using the weights and bias of the previous layer.
+    def activation(self, inputLayer, x):
+        """ Compute the activation function for a given array of inputs. Use the sigmoid function as the activation function for forward propagation. f(x) = 1/(1 + e^-x). Derivative of the sigmoid function is f'(x) = f(x)*(1 - f(x))."""
+        # If input is a Layer, not an array:
+#        if type(inputLayer) == np.ndarray: # input layer is array of inputs
+#            activation = np.transpose(np.array([inputLayer]))
+#        else: # input layer is class Layer (a hidden layer)
+#            #x = inputLayer.activation # array of activation functions coming from input
+            
+        # Rework activation function so that it evaluates the activation function for a given input layer. The current input (x) is the activation of the previous layer.
+        # x is an array containing either the inputs to the network or the activation array of the previous layer.
+    
+    # weights and bias are from a layer are the output weights and bias of that layer. Calculate the input to the next layer using the weights and bias of the previous layer.
 
-            z = np.dot(np.transpose(inputLayer.weights),x) + inputLayer.bias # z = Wtranspose*x + b, total weighted sum of inputs
+        z = np.dot(np.transpose(inputLayer.weights),x) + inputLayer.bias # z = Wtranspose*x + b, total weighted sum of inputs
 
-            activation = 1/(1 + np.exp(-z)) # the sigmoid function
+        activation = 1/(1 + np.exp(-z)) # the sigmoid function
         return activation
         
         
@@ -103,13 +106,30 @@ def backpropagation(network, x, y):
     gradb = [None]*(len(network)-1)
     
     # for output layer, d = -(y-a)*f'(z), f'(z) = a*(1-a)
-    a = network[-1].activation # get the activation of the output layer
+    #a = network[-1].activation # get the activation of the output layer
+    
+    # Rework activation function. Feedforward pass to calculate activation.
+    # Forward pass
+    activations = [None]*(len(network)) # store activations, each item in list is a column vector of activations for that layer
+    for layer in range(len(network)):
+        if layer == 0: # for the input layer
+            activations[layer] = x
+        else: # for all other layers after input
+            activations[layer] = network[layer].activation(network[layer-1],activations[layer-1])
+    
+    # Backward pass
+    #a = network[-1].activationfunction(network[-1].inputLayer)
+    # Rework for activation update
+    a = activations[-1]
+    endact = activations[-1] # store the activations of last layer
     fprime = a*(1-a) # f'(z) = a*(1-a)
     d = -(y-a)*fprime
     
     # for every other layer from the second to last to first, d = W*d(l+1)*f'(z)
     for layer in range(len(network)-2,-1,-1): # count backwards from second to last layer to the second layer (i.e. for 3 layers, this is just the hidden layer)
-        a = network[layer].activation # get the activation of the current layer
+        #a = network[layer].activation # get the activation of the current layer
+        # Rework a
+        a = activations[layer]
         
         # calculate grad of current layer once we've calculated delta of next layer
         gradw[layer] = np.dot(a,np.transpose(d))
@@ -121,15 +141,17 @@ def backpropagation(network, x, y):
         fprime = a*(1-a) # f'(z) = a*(1-a)
         d = np.dot(network[layer].weights,d)*fprime
         
-    return gradw, gradb
+        # collect the activations of the last layer for each input by returning a
+        
+    return gradw, gradb, endact
     
 
 def gradientdescent(network, xmatrix, ymatrix):
     """ Use a linear regression cost function. J(W,b,x,y) = 0.5*(h(x) - y(x))**2 where x,y are true input and answer from training set and h is the predicted answer."""
     
     # set parameters
-    alpha = 0.05 # learning rate (could try 0.5 or 0.1)
-    weightdecay = 0.9 # lambda (weight decay parameter)
+    alpha = 0.5 # learning rate (start with 0.05, could try 0.5 or 0.1)
+    weightdecay = .9 # lambda (weight decay parameter, start with 0.9)
     
     # Initialize delW and delB with zeros of same dimensions as weight/bias at each layer.
     delW = [None]*(len(network)-1) # list to store weight matrix for each layer
@@ -148,6 +170,9 @@ def gradientdescent(network, xmatrix, ymatrix):
     m = np.shape(xmatrix)[1] # number of columns in the input matrix.
     assert m == np.shape(ymatrix)[1] # make sure same number of inputs and outputs
     
+    # Store output values to compare to correct y values. Create a matrix of zeros with same shape as ymatrix.
+    finalactivation = np.zeros_like(ymatrix)
+
     # Each column is one set of inputs.
     for i in range(m): # loop through each input
         x = np.zeros([nodesperinput, 1])
@@ -156,7 +181,34 @@ def gradientdescent(network, xmatrix, ymatrix):
         y[:,0] = ymatrix[:,i]
         
         # calculate the deltas using backpropagation
-        gradW, gradB = backpropagation(network, x, y)
+        # actxy is the evaluated output of a given x,y input
+        gradW, gradB, actxy = backpropagation(network, x, y)
+        #print(x)
+        #print(actxy)
+        # update output values with new actxy values
+#        
+#        print(np.shape(actxy))
+#        print(np.shape(finalactivation))
+#        print(np.shape(ymatrix))
+        #
+        #print(finalactivation[:,i])
+
+        
+        #print(np.shape(finalactivation[:,i]))
+        #print(type(finalactivation[:,i]))
+        fat = np.transpose(finalactivation)
+        #print(fat)
+        #print(actxyt)
+        #print(i)
+        #print(np.transpose(actxy))
+        fat[i,:] = np.transpose(actxy)
+        #print(fat)
+        #print('finalact')
+        finalactivation = np.transpose(fat)
+        #print(finalactivation)
+        # problem with broadcasting
+        #finalactivation[:,i] = actxy[:,:]
+        
         for L in range(len(network)-1): # for each input, loop through each layer        
             delW[L] = delW[L] + gradW[L]
             delB[L] = delB[L] + gradB[L]
@@ -168,12 +220,12 @@ def gradientdescent(network, xmatrix, ymatrix):
         # calculate new bias without weight decay term
         
         # update weights and bias
-        network[L].weights = newW
-        network[L].bias = newB
+        network[Layer].weights = newW
+        network[Layer].bias = newB
         
-            
+    # calculate the cost for this round of gradient descent       
     totalcost = None
-    return totalcost
+    return totalcost, finalactivation
 
 
        
@@ -190,20 +242,58 @@ def autoencoder():
     # Make the network as an array of layers
     network = np.array([inputs, hidden, outputs])
     
-
-#    gradW, gradB = backpropagation(network, np.array([[1],[0]]),np.array([[1],[0]]))
+    
+    # make a new network compatible with multiple inputs
+    ###for input 8
+    networkShape = np.array([8,3,8])
+    inputs = Layer(networkShape[0], None, networkShape[1])
+    hidden = Layer(networkShape[1], inputs, networkShape[2]) # hidden layer with 3 nodes, takes in inputs layer
+    outputs = Layer(networkShape[2], hidden) 
+    newnet = np.array([inputs, hidden, outputs])
+    
+    #print(inputs.weights)
+    
+#    gradW, gradB = backpropagation(newnet, np.array([[1],[0],[0]]),np.array([[1],[0],[0]]))
+#    print(gradB)
 #    print(network[0])
 #    print(network[0].weights)
 #    print(network[1])
 #    print(network[1].weights)
 #    print(network[2])
+
     
     # Use the idenity matrix as an input to test the autoencoder.
     identityinput3 = np.identity(3)
     identityinput8 = np.identity(8)
+    #print(newnet[1].bias)
+    x = np.array([[1],[0],[0],[0],[0],[0],[0],[0]])
+#    testcost, final = gradientdescent(newnet, x, x)
+ 
+    # repeat steps of gradient descent
+    for i in range(10000):
+        testcost, finalactivation = gradientdescent(newnet, identityinput8, identityinput8)
+ #       testcost, final = gradientdescent(network, x, x)
+        #print(final)
+#    print(newnet[0].weights)
     
     # need to initialize network w/o one input#################3
     #cost = gradientdescent(network, identityinput3, identityinput3)
-    return net
+    
+   
+    activations = [None]*(len(newnet)) # store activations, each item in list is a column vector of activations for that layer
+        
+        # check output
+    for layer in range(len(newnet)):
+        if layer == 0: # for the input layer
+            activations[layer] = x
+            #print(x)
+        else: # for all other layers after input
+            activations[layer] = network[layer].activation(newnet[layer-1],activations[layer-1])
+    
+    a = activations[-1]
+    print(a)
+    print(finalactivation)
+    
+    return net, finalactivation
 
-autoencoder()
+net, final = autoencoder()
