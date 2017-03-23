@@ -230,7 +230,7 @@ def gradientdescent(network, xmatrix, ymatrix):
 
        
 def autoencoder():
-    net = 9 #for testing
+    #net = 9 #for testing
     
     # Make three layers for the network
     networkShape = np.array([3,2,3]) # number of nodes in each layer of the network
@@ -280,20 +280,23 @@ def autoencoder():
     #cost = gradientdescent(network, identityinput3, identityinput3)
     
    
-    activations = [None]*(len(newnet)) # store activations, each item in list is a column vector of activations for that layer
-        
-        # check output
-    for layer in range(len(newnet)):
-        if layer == 0: # for the input layer
-            activations[layer] = x
-            #print(x)
-        else: # for all other layers after input
-            activations[layer] = network[layer].activation(newnet[layer-1],activations[layer-1])
+#    activations = [None]*(len(newnet)) # store activations, each item in list is a column vector of activations for that layer
+#        
+#        # check output
+#    for layer in range(len(newnet)):
+#        if layer == 0: # for the input layer
+#            activations[layer] = x
+#            #print(x)
+#        else: # for all other layers after input
+#            activations[layer] = network[layer].activation(newnet[layer-1],activations[layer-1])
+#    
+#    a = activations[-1]
+#    print(a)
+#    print(finalactivation)
     
-    a = activations[-1]
-    print(a)
-    print(finalactivation)
-    
-    return net, finalactivation
+    return finalactivation
 
-net, final = autoencoder()
+#final = autoencoder()
+  
+if __name__=="__main__":
+    final = autoencoder()

@@ -12,7 +12,8 @@ Skeleton for neural network project.
 
 ## structure
 
-All functions are contained within SmithWaterman.py.
+Autoencoder contained in neuralnet.py.
+RAP1 neural network contained in rap1net.py.
 
 
 ## usage
