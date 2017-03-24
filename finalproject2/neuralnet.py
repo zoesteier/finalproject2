@@ -146,12 +146,12 @@ def backpropagation(network, x, y):
     return gradw, gradb, endact
     
 
-def gradientdescent(network, xmatrix, ymatrix):
+def gradientdescent(network, xmatrix, ymatrix, alpha = 0.5, weightdecay = 0.9):
     """ Use a linear regression cost function. J(W,b,x,y) = 0.5*(h(x) - y(x))**2 where x,y are true input and answer from training set and h is the predicted answer."""
     
     # set parameters
-    alpha = 0.5 # learning rate (start with 0.05, could try 0.5 or 0.1)
-    weightdecay = .9 # lambda (weight decay parameter, start with 0.9)
+#    alpha = 0.5 # learning rate (start with 0.05, could try 0.5 or 0.1)
+#    weightdecay = .9 # lambda (weight decay parameter, start with 0.9)
     
     # Initialize delW and delB with zeros of same dimensions as weight/bias at each layer.
     delW = [None]*(len(network)-1) # list to store weight matrix for each layer
