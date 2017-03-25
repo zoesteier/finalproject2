@@ -146,8 +146,8 @@ def rap1net(shape, inseqlist, outbindvec):
     
     # repeat steps of gradient descent
     for i in range(10000):
-        if i%10 == 0:
-            print(i)
+#        if i%10 == 0:
+#            print(i)
         cost, finalactivation = nn.gradientdescent(net, inmatrix, outbindvec, alpha = 0.5, weightdecay = 0.1)
   
     return finalactivation, net
@@ -306,4 +306,5 @@ def evaluateTestData(testseqlist, poslist, neglist):
         
     return predictout
 
-TestPrediction = evaluateTestData(Testseqs, Posseqs, Negseqs)
+# Evaluate the test data and save output to a text file
+#TestPrediction = evaluateTestData(Testseqs, Posseqs, Negseqs)

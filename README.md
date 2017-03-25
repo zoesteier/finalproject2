@@ -7,13 +7,16 @@ Skeleton for neural network project.
 
 ## assignment
 1. Implement an 8x3x8 autoencoder.
-2. Implement a neural network to identify transcription factor binding sites.
+2. Implement a neural network to identify RAP1 transcription factor binding sites.
+#. Apply the RAP1 network to test data to predict binding sites.
+
 
 
 ## structure
 
 Autoencoder contained in neuralnet.py.
 RAP1 neural network contained in rap1net.py.
+Output sequences and scores from test data are contained in TestOutput.txt.
 
 
 ## usage
